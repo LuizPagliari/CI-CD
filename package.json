@@ -1,0 +1,21 @@
+{
+  "name": "calculator-test-pipeline",
+  "version": "1.0.0",
+  "description": "Projeto simples para testar a pipeline de CI/CD",
+  "main": "src/calculator.js",
+  "scripts": {
+    "test": "mocha test/**/*.test.js",
+    "start": "node src/calculator.js"
+  },
+  "keywords": [
+    "nodejs",
+    "ci-cd",
+    "pipeline",
+    "teste"
+  ],
+  "author": "Luiz Gabriel",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^10.2.0"
+  }
+}
