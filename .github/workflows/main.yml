@@ -1,0 +1,95 @@
+name: Node.js CI/CD Pipeline
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+  # Adicionar um workflow_dispatch para permitir aprovações manuais
+  workflow_dispatch:
+    inputs:
+      approve_merge:
+        description: 'Aprovar merge para main'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout do código
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Configurar Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+
+    - name: Instalar dependências
+      run: npm ci
+
+    - name: Executar testes unitários
+      run: npm test
+
+    - name: Incrementar versão
+      if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+      run: |
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'github-actions@github.com'
+        npm version patch -m "Incrementar versão para %s [skip ci]"
+        echo "Nova versão: $(node -p "require('./package.json').version")"
+        git push origin develop
+        
+    # Criar um PR automaticamente da develop para main
+    - name: Criar Pull Request para main
+      if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        PR_TITLE="Release v$VERSION - Merge develop em main"
+        # Verificar se já existe um PR aberto
+        PR_EXISTS=$(gh pr list --base main --head develop --json number --jq 'length')
+        if [ "$PR_EXISTS" -eq "0" ]; then
+          gh pr create --base main --head develop --title "$PR_TITLE" --body "Este PR contém as alterações da versão v$VERSION prontas para serem mergeadas na main. Aprovação obrigatória necessária."
+        else
+          echo "Já existe um PR aberto de develop para main."
+        fi
+
+  # Job separado para o merge, que só executa após aprovação manual
+  version-and-merge:
+    needs: build-test
+    runs-on: ubuntu-latest
+    # Esse job só executa quando o workflow é disparado manualmente com a aprovação
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.approve_merge == 'true'
+    
+    steps:
+    - name: Checkout do código
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Configurar usuário do Git
+      run: |
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'github-actions@github.com'
+
+    - name: Merge aprovado para main
+      run: |
+        git checkout main
+        git pull origin main
+        git merge --no-ff develop -m "Merge develop em main (aprovado)"
+        git push origin main
+
+    - name: Criar tag da versão
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        git tag -a "v$VERSION" -m "Release v$VERSION"
+        git push origin "v$VERSION"
