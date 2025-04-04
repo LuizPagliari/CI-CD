@@ -1,5 +1,9 @@
 name: Node.js CI/CD Pipeline
 
+permissions:
+  contents: write
+  pull-requests: write
+
 on:
   push:
     branches: [ develop ]
@@ -42,7 +46,6 @@ jobs:
         git config --global user.name 'Luiz.Pagliari'
         git config --global user.email 'lgabrielpagliari@gmail.com'
         git add .
-        # Verifica se há alterações para commit; se sim, comita.
         if ! git diff-index --quiet HEAD --; then
           git commit -m "Commit automático de alterações antes do version bump"
         else
