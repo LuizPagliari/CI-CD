@@ -6,9 +6,11 @@ permissions:
 
 on:
   push:
-    branches: [ develop ]
+    branches:
+      - develop
   pull_request:
-    branches: [ develop ]
+    branches:
+      - develop
   workflow_dispatch:
     inputs:
       approve_merge:
@@ -22,56 +24,56 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout do código
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout do código
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Configurar Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18.x'
-        cache: 'npm'
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          cache: 'npm'
 
-    - name: Instalar dependências
-      run: npm install
+      - name: Instalar dependências
+        run: npm install
 
-    - name: Executar testes unitários
-      run: npm test
+      - name: Executar testes unitários
+        run: npm test
 
-    - name: Commitar alterações pendentes
-      if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-      run: |
-        git config --global user.name 'Luiz.Pagliari'
-        git config --global user.email 'lgabrielpagliari@gmail.com'
-        git add .
-        if ! git diff-index --quiet HEAD --; then
-          git commit -m "Commit automático de alterações antes do version bump"
-        else
-          echo "Nenhuma alteração para commitar"
-        fi
+      - name: Commitar alterações pendentes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: |
+          git config --global user.name 'Luiz.Pagliari'
+          git config --global user.email 'lgabrielpagliari@gmail.com'
+          git add .
+          if ! git diff-index --quiet HEAD --; then
+            git commit -m "Commit automático de alterações antes do version bump"
+          else
+            echo "Nenhuma alteração para commitar"
+          fi
 
-    - name: Incrementar versão
-      if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-      run: |
-        npm version patch -m "Incrementar versão para %s [skip ci]"
-        echo "Nova versão: $(node -p "require('./package.json').version")"
-        git push origin develop
+      - name: Incrementar versão
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: |
+          npm version patch -m "Incrementar versão para %s [skip ci]"
+          echo "Nova versão: $(node -p "require('./package.json').version")"
+          git push origin develop
 
-    - name: Criar Pull Request para main
-      if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        VERSION=$(node -p "require('./package.json').version")
-        PR_TITLE="Release v$VERSION - Merge develop em main"
-        PR_EXISTS=$(gh pr list --base main --head develop --json number --jq 'length')
-        if [ "$PR_EXISTS" -eq "0" ]; then
-          gh pr create --base main --head develop --title "$PR_TITLE" --body "Este PR contém as alterações da versão v$VERSION prontas para serem mergeadas na main. Aprovação obrigatória necessária."
-        else
-          echo "Já existe um PR aberto de develop para main."
-        fi
+      - name: Criar Pull Request para main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          PR_TITLE="Release v$VERSION - Merge develop em main"
+          PR_EXISTS=$(gh pr list --base main --head develop --json number --jq 'length')
+          if [ "$PR_EXISTS" -eq "0" ]; then
+            gh pr create --base main --head develop --title "$PR_TITLE" --body "Este PR contém as alterações da versão v$VERSION prontas para serem mergeadas na main. Aprovação obrigatória necessária."
+          else
+            echo "Já existe um PR aberto de develop para main."
+          fi
 
   version-and-merge:
     needs: build-test
@@ -79,26 +81,26 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.approve_merge == 'true'
     
     steps:
-    - name: Checkout do código
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout do código
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Configurar usuário do Git
-      run: |
-        git config --global user.name 'Luiz.Pagliari'
-        git config --global user.email 'lgabrielpagliari@gmail.com'
+      - name: Configurar usuário do Git
+        run: |
+          git config --global user.name 'Luiz.Pagliari'
+          git config --global user.email 'lgabrielpagliari@gmail.com'
 
-    - name: Merge aprovado para main
-      run: |
-        git checkout main
-        git pull origin main
-        git merge --no-ff develop -m "Merge develop em main (aprovado)"
-        git push origin main
+      - name: Merge aprovado para main
+        run: |
+          git checkout main
+          git pull origin main
+          git merge --no-ff develop -m "Merge develop em main (aprovado)"
+          git push origin main
 
-    - name: Criar tag da versão
-      run: |
-        VERSION=$(node -p "require('./package.json').version")
-        git tag -a "v$VERSION" -m "Release v$VERSION"
-        git push origin "v$VERSION"
+      - name: Criar tag da versão
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
