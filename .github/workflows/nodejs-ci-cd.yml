@@ -40,8 +40,8 @@ jobs:
     - name: Incrementar versão
       if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
       run: |
-        git config --global user.name 'GitHub Actions'
-        git config --global user.email 'github-actions@github.com'
+        git config --global user.name 'Luiz.Pagliari'
+        git config --global user.email 'lgabrielpagliari@gmail.com'
         npm version patch -m "Incrementar versão para %s [skip ci]"
         echo "Nova versão: $(node -p "require('./package.json').version")"
         git push origin develop
