@@ -10,6 +10,7 @@ A calculadora implementa quatro operações básicas:
 - Multiplicação
 - Divisão
 - teste
+- teste
 
 ## Estrutura do Projeto
 
