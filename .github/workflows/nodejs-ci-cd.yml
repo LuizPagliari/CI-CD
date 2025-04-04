@@ -5,7 +5,6 @@ on:
     branches: [ develop ]
   pull_request:
     branches: [ develop ]
-  # Adicionar um workflow_dispatch para permitir aprovações manuais
   workflow_dispatch:
     inputs:
       approve_merge:
@@ -37,16 +36,26 @@ jobs:
     - name: Executar testes unitários
       run: npm test
 
-    - name: Incrementar versão
+    - name: Commitar alterações pendentes
       if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
       run: |
         git config --global user.name 'Luiz.Pagliari'
         git config --global user.email 'lgabrielpagliari@gmail.com'
+        git add .
+        # Verifica se há alterações para commit; se sim, comita.
+        if ! git diff-index --quiet HEAD --; then
+          git commit -m "Commit automático de alterações antes do version bump"
+        else
+          echo "Nenhuma alteração para commitar"
+        fi
+
+    - name: Incrementar versão
+      if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+      run: |
         npm version patch -m "Incrementar versão para %s [skip ci]"
         echo "Nova versão: $(node -p "require('./package.json').version")"
         git push origin develop
-        
-    # Criar um PR automaticamente da develop para main
+
     - name: Criar Pull Request para main
       if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
       env:
@@ -54,7 +63,6 @@ jobs:
       run: |
         VERSION=$(node -p "require('./package.json').version")
         PR_TITLE="Release v$VERSION - Merge develop em main"
-        # Verificar se já existe um PR aberto
         PR_EXISTS=$(gh pr list --base main --head develop --json number --jq 'length')
         if [ "$PR_EXISTS" -eq "0" ]; then
           gh pr create --base main --head develop --title "$PR_TITLE" --body "Este PR contém as alterações da versão v$VERSION prontas para serem mergeadas na main. Aprovação obrigatória necessária."
@@ -62,11 +70,9 @@ jobs:
           echo "Já existe um PR aberto de develop para main."
         fi
 
-  # Job separado para o merge, que só executa após aprovação manual
   version-and-merge:
     needs: build-test
     runs-on: ubuntu-latest
-    # Esse job só executa quando o workflow é disparado manualmente com a aprovação
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.approve_merge == 'true'
     
     steps:
