@@ -78,8 +78,8 @@ jobs:
 
     - name: Configurar usuário do Git
       run: |
-        git config --global user.name 'GitHub Actions'
-        git config --global user.email 'github-actions@github.com'
+        git config --global user.name 'Luiz.Pagliari'
+        git config --global user.email 'lgabrielpagliari@gmail.com'
 
     - name: Merge aprovado para main
       run: |
