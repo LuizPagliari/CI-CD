@@ -1,6 +1,6 @@
 {
   "name": "calculator-test-pipeline",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Projeto simples para testar a pipeline de CI/CD",
   "main": "src/calculator.js",
   "scripts": {
